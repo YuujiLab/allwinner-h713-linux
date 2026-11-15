@@ -207,12 +207,12 @@ def main(argv):
     if "--pruefen" in argv:
         alt = open(ziel, encoding="utf-8").read() if os.path.exists(ziel) else ""
         if alt != neu:
-            print("doku/INDEX.md ist nicht auf dem Stand -- release/doku-index.py laufen lassen")
+            print("doku/INDEX.md is not up to date (doku/INDEX.md ist nicht auf dem Stand) -- run release/doku-index.py")
             return 1
-        print("doku/INDEX.md ist auf dem Stand")
+        print("doku/INDEX.md is up to date (doku/INDEX.md ist auf dem Stand)")
         return 0
     open(ziel, "w", encoding="utf-8").write(neu)
-    print("doku/INDEX.md geschrieben (%d Zeilen)" % len(neu.splitlines()))
+    print("doku/INDEX.md written (%d lines)" % len(neu.splitlines()))
     return 0
 
 

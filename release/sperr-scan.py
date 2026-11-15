@@ -257,22 +257,22 @@ def main() -> int:
                         if bg in zeile:
                             funde.append(("Identitaet", "%s:%d" % (rel, z_nr), bg[:3] + "\u2026"))
                             break
-    print(f"sperr-scan: {n} Dateien unter {wurzel}, {len(hashes)} Referenz-Hashes"
-          + (f", {len(begriffe)} Sperrbegriffe" if begriffe else ", KEINE Sperrbegriffe-Datei (Regel 8 prueft nichts)"))
+    print(f"sperr-scan: {n} files under {wurzel}, {len(hashes)} reference hashes"
+          + (f", {len(begriffe)} blocked terms" if begriffe else ", NO blocked terms file (rule 8 checks nothing)"))
     for art, rel, was in funde:
-        print(f"  FUND  {art:<14} {rel}  ({was})")
+        print(f"  FINDING  {art:<14} {rel}  ({was})")
     for rel, g in sorted(gross, key=lambda x: -x[1]):
-        print(f"  gross {g/1048576:6.1f} MB  {rel}")
+        print(f"  large    {g/1048576:6.1f} MB  {rel}")
     if ignoriert:
-        print(f"  {len(ignoriert)} Datei(en) waeren Funde, aber git ignoriert sie -- ein Push nimmt sie nicht mit:")
+        print(f"  {len(ignoriert)} file(s) would be findings, but git ignores them -- a push does not include them:")
         for rel, was in ignoriert[:10]:
-            print(f"    ignoriert  {rel}  ({was})")
+            print(f"    ignored    {rel}  ({was})")
         if len(ignoriert) > 10:
-            print(f"    ... und {len(ignoriert) - 10} weitere")
+            print(f"    ... and {len(ignoriert) - 10} more")
     if funde:
-        print(f"\n{len(funde)} harte Funde -- NICHT pushen.")
+        print(f"\n{len(funde)} hard findings (harte Funde) -- DO NOT PUSH.")
         return 1
-    print("keine harten Funde." + (f" {len(gross)} grosse Datei(en) zum Ansehen." if gross else ""))
+    print("No hard findings (keine harten Funde)." + (f" {len(gross)} large file(s) to inspect." if gross else ""))
     return 0
 
 

@@ -1,0 +1,82 @@
+name: Build H713 Linux Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      board:
+        description: 'Target board ID (e.g. hy200-qz713df-a1, hy310, l018)'
+        required: true
+        default: 'hy200-qz713df-a1'
+      variant:
+        description: 'Board variant (e.g. projector09220931, projector05061226)'
+        required: true
+        default: 'projector09220931'
+      profile:
+        description: 'Rootfs profile (e.g. media,desktop or none)'
+        required: true
+        default: 'media,desktop'
+      version:
+        description: 'Release version label'
+        required: true
+        default: 'v0.97-beta'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Verify release gates
+        run: |
+          release/tor.sh
+          bash boards/check.sh
+
+      - name: Set up h713-build Podman container
+        run: |
+          podman run -d --name h713-build --userns=keep-id \
+            -v "$PWD":/work -w /work docker.io/library/ubuntu:24.04 sleep infinity
+          
+          podman exec -u root h713-build apt-get update
+          podman exec -u root h713-build apt-get install -y --no-install-recommends \
+            clang lld llvm device-tree-compiler swig flex bison u-boot-tools \
+            build-essential bc kmod libssl-dev libelf-dev python3-dev git curl \
+            ca-certificates xz-utils cpio rsync libgnutls28-dev uuid-dev \
+            libncurses-dev pkg-config libusb-1.0-0-dev libfdt-dev python3-capstone \
+            python3-setuptools python3-pyelftools mmdebstrap e2fsprogs zstd \
+            meson ninja-build python3-mako python3-yaml python3-packaging \
+            libwayland-bin libwayland-dev libfreetype-dev
+
+          podman exec -u root h713-build bash -c '
+            curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o /usr/share/keyrings/llvm.asc
+            echo "deb [signed-by=/usr/share/keyrings/llvm.asc] http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main" \
+                > /etc/apt/sources.list.d/llvm20.list
+            apt-get update -qq && apt-get install -y clang-20 lld-20 llvm-20
+            for t in clang ld.lld llvm-objcopy llvm-ar llvm-nm llvm-objdump llvm-readelf llvm-strip; do
+                ln -sf /usr/bin/$t-20 /usr/local/bin/$t
+            done'
+
+      - name: Build image
+        run: |
+          args=(--board "${{ inputs.board }}" --version "${{ inputs.version }}")
+          if [ -n "${{ inputs.variant }}" ]; then
+            args+=(--variant "${{ inputs.variant }}")
+          fi
+          if [ -n "${{ inputs.profile }}" ]; then
+            args+=(--profile "${{ inputs.profile }}")
+          fi
+          release/build-all.sh "${args[@]}"
+
+      - name: Upload image artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.board }}-${{ inputs.variant }}-${{ inputs.version }}
+          path: |
+            installer/out/*.img
+            installer/out/*.json
+            mainline/build/out/bl31.bin
+            mainline/build/out/u-boot*
+            mainline/build/out/*.fit
